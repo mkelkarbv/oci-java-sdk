@@ -12,6 +12,7 @@
   </parent>
 
   <artifactId>oci-java-sdk-addons-sasl</artifactId>
+  <version>1.32.1-test</version>
   <name>Oracle Cloud Infrastructure SDK - SASL Client</name>
   <description>This project contains the SASL client used for Oracle Cloud Infrastructure</description>
   <url>https://docs.cloud.oracle.com/Content/API/SDKDocs/javasdk.htm</url>

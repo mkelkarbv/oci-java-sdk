@@ -1,6 +1,8 @@
 /**
- * Copyright (c) 2016, 2021, Oracle and/or its affiliates.  All rights reserved.
- * This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
+ * Copyright (c) 2016, 2021, Oracle and/or its affiliates.  All rights reserved. This software is
+ * dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at
+ * https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at
+ * http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
  */
 package com.oracle.bmc.auth.sasl;
 
@@ -34,13 +36,15 @@ import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslClientFactory;
 import javax.security.sasl.SaslException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
- * Implementation of a {@link SaslClient} for the OCI SASL mechanism.
- * That class shouldn't be instanciated manually but registered using the {@link OciSaslClientProvider}
- * and calling {@link javax.security.sasl.Sasl#createSaslClient(String[], String, String, String, Map, CallbackHandler)}
- * using the proper mechanism.
+ * Implementation of a {@link SaslClient} for the OCI SASL mechanism. That class shouldn't be
+ * instanciated manually but registered using the {@link OciSaslClientProvider} and calling {@link
+ * javax.security.sasl.Sasl#createSaslClient(String[], String, String, String, Map,
+ * CallbackHandler)} using the proper mechanism.
  */
+@Slf4j
 public class OciSaslClient implements SaslClient {
 
     public static final int MIN_CHALLENGE_SIZE = 32;
@@ -63,12 +67,19 @@ public class OciSaslClient implements SaslClient {
     }
 
     private OciSaslClient(
-            OciMechanism mechanism,
-            BasicAuthenticationDetailsProvider authProvider,
-            String intent) {
+        OciMechanism mechanism,
+        BasicAuthenticationDetailsProvider authProvider,
+        String intent) {
         this.mechanism = mechanism;
         this.authProvider = authProvider;
         this.intent = intent;
+        if (authProvider != null) {
+            LOG.info("in constructor - auth provider is null! mechanism {}, intent {}", mechanism,
+                intent);
+        } else {
+            LOG.info("in constructor - auth provider is NOT null! mechanism {}, intent {}",
+                mechanism, intent);
+        }
     }
 
     @Override
@@ -96,6 +107,11 @@ public class OciSaslClient implements SaslClient {
     private Key generateKeyMessage() {
         // Because the authProvider might be used across multiple clients,
         // we need to protect its access while we generate and retrieve a new private key
+        if (authProvider == null) {
+            LOG.info("generateKeyMessage - auth provider is null!");
+        } else {
+            LOG.info("generateKeyMessage - auth provider is Not Null!");
+        }
         synchronized (authProvider) {
             // Get a new token for each new key exchange to prevent stale keys
             if (authProvider instanceof RefreshableOnNotAuthenticatedProvider) {
@@ -103,10 +119,10 @@ public class OciSaslClient implements SaslClient {
             }
 
             currentPrivateKey =
-                    new OciPrivateKey(
-                            authProvider.getKeyId(),
-                            authProvider.getPrivateKey(),
-                            authProvider.getPassphraseCharacters());
+                new OciPrivateKey(
+                    authProvider.getKeyId(),
+                    authProvider.getPrivateKey(),
+                    authProvider.getPassphraseCharacters());
 
             return Key.newBuilder().setKeyId(currentPrivateKey.keyId).setIntent(intent).build();
         }
@@ -120,33 +136,33 @@ public class OciSaslClient implements SaslClient {
         final long epoch = OffsetDateTime.now().toEpochSecond();
 
         final PEMFileRSAPrivateKeySupplier keySupplier =
-                new PEMFileRSAPrivateKeySupplier(
-                        currentPrivateKey.privateKey, currentPrivateKey.passphraseCharacters);
+            new PEMFileRSAPrivateKeySupplier(
+                currentPrivateKey.privateKey, currentPrivateKey.passphraseCharacters);
 
         currentPrivateKey = null;
 
         final RSAPrivateKey privateKey =
-                keySupplier
-                        .getKey()
-                        .toJavaUtil()
-                        .orElseThrow(() -> new SaslException("Unable to get private key"));
+            keySupplier
+                .getKey()
+                .toJavaUtil()
+                .orElseThrow(() -> new SaslException("Unable to get private key"));
 
         final byte[] intentBytes = intent.getBytes(StandardCharsets.UTF_8);
 
         final int messageToSignLength =
-                challenge.getChallenge().toByteArray().length + intentBytes.length + Long.BYTES;
+            challenge.getChallenge().toByteArray().length + intentBytes.length + Long.BYTES;
         final ByteBuffer messageToSign = ByteBuffer.allocate(messageToSignLength);
         messageToSign.put(challenge.getChallenge().toByteArray());
         messageToSign.put(intentBytes);
         messageToSign.putLong(epoch);
 
         final byte[] signedMessage =
-                SIGNER.sign(privateKey, messageToSign.array(), mechanism.algorithm().getJvmName());
+            SIGNER.sign(privateKey, messageToSign.array(), mechanism.algorithm().getJvmName());
 
         return Response.newBuilder()
-                .setTime(epoch)
-                .setSignature(ByteString.copyFrom(signedMessage))
-                .build();
+            .setTime(epoch)
+            .setSignature(ByteString.copyFrom(signedMessage))
+            .build();
     }
 
     private Challenge getAndValidateChallenge(byte[] data) throws SaslException {
@@ -157,8 +173,8 @@ public class OciSaslClient implements SaslClient {
             final int challengeSize = challenge.getChallenge().size();
             if (challengeSize < MIN_CHALLENGE_SIZE || challengeSize > MAX_CHALLENGE_SIZE) {
                 throw new SaslException(
-                        "Challenge sent by the server doesn't have the right size - "
-                                + challengeSize);
+                    "Challenge sent by the server doesn't have the right size - "
+                        + challengeSize);
             }
 
             return challenge;
@@ -194,19 +210,20 @@ public class OciSaslClient implements SaslClient {
     }
 
     @Override
-    public void dispose() {}
+    public void dispose() {
+    }
 
     public static class OciSaslClientFactory implements SaslClientFactory {
 
         @Override
         public SaslClient createSaslClient(
-                String[] mechanisms,
-                String authorizationId,
-                String protocol,
-                String serverName,
-                Map<String, ?> props,
-                CallbackHandler cbh)
-                throws SaslException {
+            String[] mechanisms,
+            String authorizationId,
+            String protocol,
+            String serverName,
+            Map<String, ?> props,
+            CallbackHandler cbh)
+            throws SaslException {
 
             OciMechanism ociMechanism = null;
             for (String mechanism : mechanisms) {
@@ -217,10 +234,10 @@ public class OciSaslClient implements SaslClient {
             }
             if (ociMechanism == null) {
                 throw new SaslException(
-                        String.format(
-                                "Requested mechanisms '%s' not supported. Supported mechanisms are '%s'.",
-                                Collections.singletonList(mechanisms),
-                                OciMechanism.mechanismNames()));
+                    String.format(
+                        "Requested mechanisms '%s' not supported. Supported mechanisms are '%s'.",
+                        Collections.singletonList(mechanisms),
+                        OciMechanism.mechanismNames()));
             }
 
             final Credentials credentials = getCredentials(cbh);
@@ -238,23 +255,52 @@ public class OciSaslClient implements SaslClient {
 
             final NameCallback nameCallback = new NameCallback("Payload");
             final PasswordCallback passwordCallback =
-                    new PasswordCallback("AuthProviderKey", false);
+                new PasswordCallback("AuthProviderKey", false);
             final OciAuthProviderCallback authProviderCallback = new OciAuthProviderCallback();
+
+            if (authProviderCallback.authProvider() == null) {
+                LOG.info(
+                    "OciSaslClient: before callbacks - getCredentials() - auth provider is null!");
+            } else {
+                LOG.info(
+                    "OciSaslClient: before callbacks - getCredentials()- auth provider is Not Null!");
+            }
 
             execute(callbackHandler, nameCallback, true);
             execute(callbackHandler, passwordCallback, false);
             execute(callbackHandler, authProviderCallback, false);
 
-            if (authProviderCallback.authProvider() == null
-                    && passwordCallback.getPassword() == null) {
-                throw new SaslException(
-                        "Callback handler needs to support either PasswordCallback or OciAuthProviderCallback");
+            if (authProviderCallback.authProvider() == null) {
+                LOG.info(
+                    "OciSaslClient: after callbacks - getCredentials() - auth provider is null!");
+            } else {
+                LOG.info(
+                    "OciSaslClient: after callbacks - getCredentials()- auth provider is Not Null!");
             }
 
+            if (authProviderCallback.authProvider() == null
+                && passwordCallback.getPassword() == null) {
+                throw new SaslException(
+                    "Callback handler needs to support either PasswordCallback or OciAuthProviderCallback");
+            }
+
+            LOG.info("OciSaslClient: after callbacks - password callback has password - {}",
+                new String(passwordCallback.getPassword()));
+
+            AuthProviderCache.printCache();
+
             final BasicAuthenticationDetailsProvider authProvider =
-                    authProviderCallback.authProvider() != null
-                            ? authProviderCallback.authProvider()
-                            : AuthProviderCache.get(new String(passwordCallback.getPassword()));
+                authProviderCallback.authProvider() != null
+                    ? authProviderCallback.authProvider()
+                    : AuthProviderCache.get(new String(passwordCallback.getPassword()));
+
+            if (authProvider == null) {
+                LOG.info(
+                    "OciSaslClient:getCredentials() - building creds - auth provider is null!");
+            } else {
+                LOG.info(
+                    "OciSaslClient:getCredentials() - building creds - auth provider is Not Null!");
+            }
 
             final String intent = nameCallback.getName();
 
@@ -262,16 +308,16 @@ public class OciSaslClient implements SaslClient {
         }
 
         static <T extends Callback> void execute(
-                CallbackHandler callbackHandler, T callback, boolean required)
-                throws SaslException {
+            CallbackHandler callbackHandler, T callback, boolean required)
+            throws SaslException {
             try {
-                callbackHandler.handle(new Callback[] {callback});
+                callbackHandler.handle(new Callback[]{callback});
             } catch (UnsupportedCallbackException exc) {
                 if (required) {
                     throw new SaslException(
-                            exc.getCallback().getClass().getSimpleName()
-                                    + " is not supported by the callback handler",
-                            exc);
+                        exc.getCallback().getClass().getSimpleName()
+                            + " is not supported by the callback handler",
+                        exc);
                 }
             } catch (IOException exc) {
                 throw new SaslException("Unexpected IOException during callback handler", exc);
@@ -279,6 +325,7 @@ public class OciSaslClient implements SaslClient {
         }
 
         private static final class Credentials {
+
             private final BasicAuthenticationDetailsProvider authProvider;
             private final String payload;
 
@@ -292,7 +339,7 @@ public class OciSaslClient implements SaslClient {
     static class AuthProviderCache {
 
         private static final Map<String, BasicAuthenticationDetailsProvider> authProvidersCache =
-                new HashMap<>();
+            new HashMap<>();
 
         static String cache(BasicAuthenticationDetailsProvider authProvider) {
             String key = UUID.randomUUID().toString();
@@ -303,10 +350,18 @@ public class OciSaslClient implements SaslClient {
         static BasicAuthenticationDetailsProvider get(String key) {
             return authProvidersCache.get(key);
         }
+
+        static void printCache() {
+            for (Map.Entry<String, BasicAuthenticationDetailsProvider> entry : authProvidersCache
+                .entrySet()) {
+                LOG.info("cache key - {}, value - {}", entry.getKey(), entry.getValue());
+            }
+        }
     }
 
     @RequiredArgsConstructor
     private static final class OciPrivateKey {
+
         private final String keyId;
         private final InputStream privateKey;
         private final char[] passphraseCharacters;

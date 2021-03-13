@@ -1,6 +1,8 @@
 /**
- * Copyright (c) 2016, 2021, Oracle and/or its affiliates.  All rights reserved.
- * This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
+ * Copyright (c) 2016, 2021, Oracle and/or its affiliates.  All rights reserved. This software is
+ * dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at
+ * https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at
+ * http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
  */
 package com.oracle.bmc.auth.sasl;
 
@@ -9,7 +11,9 @@ import java.util.Map;
 import javax.security.auth.Subject;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.spi.LoginModule;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 abstract class OciLoginModule implements LoginModule {
 
     private static final String INTENT_CONFIG = "intent";
@@ -20,10 +24,10 @@ abstract class OciLoginModule implements LoginModule {
 
     @Override
     public void initialize(
-            Subject subject,
-            CallbackHandler callbackHandler,
-            Map<String, ?> sharedState,
-            Map<String, ?> options) {
+        Subject subject,
+        CallbackHandler callbackHandler,
+        Map<String, ?> sharedState,
+        Map<String, ?> options) {
 
         final String intent = (String) options.get(INTENT_CONFIG);
         if (intent == null) {
@@ -34,11 +38,17 @@ abstract class OciLoginModule implements LoginModule {
         subject.getPublicCredentials().add(intent);
 
         final BasicAuthenticationDetailsProvider authProvider = loadAuthenticationProvider(options);
+        if (authProvider == null) {
+            LOG.info("OciLoginModule: initialize()- auth provider is null!");
+        } else {
+            LOG.info("OciLoginModule: initialize()- auth provider is Not Null!");
+        }
 
         // Because Kafka doesn't allow using a custom callback handler and requires the password to be a string
         // we will map the auth provider to a UUID and use the cache key as a private credential.
         // The SASL client will retrieve the auth provider using the key.
         final String cacheKey = OciSaslClient.AuthProviderCache.cache(authProvider);
+        LOG.info("OciLoginModule: initialize()- cache key is - {}", cacheKey);
         subject.getPrivateCredentials().add(cacheKey);
         // We will also add it as the full instance for newer SASL clients that can control their callback handler.
         // The callback handler will need to handle callback of type OciAuthProviderCallback.
@@ -46,7 +56,7 @@ abstract class OciLoginModule implements LoginModule {
     }
 
     protected abstract BasicAuthenticationDetailsProvider loadAuthenticationProvider(
-            Map<String, ?> options);
+        Map<String, ?> options);
 
     @Override
     public boolean login() {

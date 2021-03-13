@@ -11,6 +11,7 @@ import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Callback to handle in the SASL callback handler used when creating a {@link javax.security.sasl.SaslClient} using the OCI SASL mechanism.
@@ -42,6 +43,7 @@ import javax.security.auth.callback.UnsupportedCallbackException;
  * }
  * }</pre>
  */
+@Slf4j
 public class OciAuthProviderCallback implements Callback {
     private BasicAuthenticationDetailsProvider authProvider;
 
@@ -49,6 +51,11 @@ public class OciAuthProviderCallback implements Callback {
      * Gets the associated {@link BasicAuthenticationDetailsProvider}
      */
     public BasicAuthenticationDetailsProvider authProvider() {
+        if (authProvider == null) {
+            LOG.info("OciAuthProviderCallback: getAuthProvider()- auth provider is null!");
+        } else {
+            LOG.info("OciAuthProviderCallback: getAuthProvider()- auth provider is Not Null!");
+        }
         return authProvider;
     }
 
@@ -56,6 +63,11 @@ public class OciAuthProviderCallback implements Callback {
      * Sets the provided {@link BasicAuthenticationDetailsProvider}
      */
     public void authProvider(BasicAuthenticationDetailsProvider authProvider) {
+        if (authProvider == null) {
+            LOG.info("OciAuthProviderCallback: setAuthProvider()- auth provider is null!");
+        } else {
+            LOG.info("OciAuthProviderCallback: setAuthProvider()- auth provider is Not Null!");
+        }
         this.authProvider = authProvider;
     }
 }
