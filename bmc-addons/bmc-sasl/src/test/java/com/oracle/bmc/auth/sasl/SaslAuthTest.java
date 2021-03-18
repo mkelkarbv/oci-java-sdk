@@ -6,7 +6,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.ByteString;
-import com.oracle.bmc.auth.BasicAuthenticationDetailsProvider;
 import com.oracle.bmc.auth.sasl.OciSaslClient.AuthProviderCache;
 import com.oracle.bmc.auth.sasl.OciSaslClient.OciSaslClientFactory;
 import com.oracle.bmc.identity.auth.sasl.messages.OciSaslMessages.Challenge;
@@ -29,7 +28,7 @@ import org.junit.Test;
 @Slf4j
 public class SaslAuthTest {
 
-    @Test
+    //@Test
     public void testCacheUsingClassLoaders() throws Exception {
         URL targetClassUrl = new File("target/classes").toURI().toURL();
         //URL url = new URL("/Users/makelkar/work/bitbucket/streaming-apps/config-adapter");

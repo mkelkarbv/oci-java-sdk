@@ -74,10 +74,10 @@ public class OciSaslClient implements SaslClient {
         this.authProvider = authProvider;
         this.intent = intent;
         if (authProvider != null) {
-            LOG.info("in constructor - auth provider is null! mechanism {}, intent {}", mechanism,
+            LOG.info("in constructor - auth provider is NOT null! mechanism {}, intent {}", mechanism,
                 intent);
         } else {
-            LOG.info("in constructor - auth provider is NOT null! mechanism {}, intent {}",
+            LOG.info("in constructor - auth provider is null! mechanism {}, intent {}",
                 mechanism, intent);
         }
     }
@@ -287,12 +287,12 @@ public class OciSaslClient implements SaslClient {
             LOG.info("OciSaslClient: after callbacks - password callback has password - {}",
                 new String(passwordCallback.getPassword()));
 
-            AuthProviderCache.printCache();
+            OciSaslClient.AuthProviderCache.printCache();
 
             final BasicAuthenticationDetailsProvider authProvider =
                 authProviderCallback.authProvider() != null
                     ? authProviderCallback.authProvider()
-                    : AuthProviderCache.get(new String(passwordCallback.getPassword()));
+                    : OciSaslClient.AuthProviderCache.get(new String(passwordCallback.getPassword()));
 
             if (authProvider == null) {
                 LOG.info(
@@ -338,12 +338,17 @@ public class OciSaslClient implements SaslClient {
 
     static class AuthProviderCache {
 
+        static {
+            LOG.info("initializing auth provider cache,");
+        }
         private static final Map<String, BasicAuthenticationDetailsProvider> authProvidersCache =
             new HashMap<>();
 
         static String cache(BasicAuthenticationDetailsProvider authProvider) {
             String key = UUID.randomUUID().toString();
+            LOG.info("adding cache entry, key - {}, provider - {}", key, authProvider);
             authProvidersCache.put(key, authProvider);
+            printCache();
             return key;
         }
 
@@ -352,6 +357,7 @@ public class OciSaslClient implements SaslClient {
         }
 
         static void printCache() {
+            LOG.info("cache has {} entries", authProvidersCache.size());
             for (Map.Entry<String, BasicAuthenticationDetailsProvider> entry : authProvidersCache
                 .entrySet()) {
                 LOG.info("cache key - {}, value - {}", entry.getKey(), entry.getValue());
